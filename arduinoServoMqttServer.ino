@@ -2,7 +2,12 @@
 #include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
 #include <PubSubClient.h>
 #include <EEPROM.h>
+#include <Servo.h>
 
+// Declaramos la variable para controlar el servo
+Servo servoMotor;
+
+int posicionServo = 0;
 
 void callback(char *topic, byte *payload, unsigned int length1);
 
@@ -24,7 +29,7 @@ PubSubClient client(mqtt_server, 1883, callback, espclient);
 //#define LED_PIN 0
 #define OTHER_PIN 0
 
-int estadoPin = 0;
+
 
 //for LED status
 #include <Ticker.h>
@@ -60,15 +65,18 @@ void setup()
   Serial.begin(115200);
   EEPROM.begin(512);
 
-
   WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
   // put your setup code here, to run once:
   //  Serial.begin(115200);
 
   //set led pin as output
   pinMode(LED, OUTPUT);
-  pinMode(OTHER_PIN, OUTPUT);
-  digitalWrite(OTHER_PIN, estadoPin);
+
+  // Iniciamos el servo para que empiece a trabajar con el pin 9
+  servoMotor.attach(OTHER_PIN);
+
+  // Desplazamos a la posición de la variable que inicia en 0
+  servoMotor.write(posicionServo);
 
   // start ticker with 0.5 because we start in AP mode and try to connect
   ticker.attach(0.6, tick);
@@ -152,7 +160,7 @@ void callback(char *topic, byte *payload, unsigned int length1)
   }
 
   Serial.println("Datos recibidos: " + myString);
-  estadoPin = myString.toInt();
+  posicionServo = myString.toInt();
 
 }
 
@@ -186,8 +194,7 @@ void reconnect()
 
 void loop()
 {
-  controlEncendido();
-  modoFiesta();
+  constrolServo();
   if (!client.connected())
   {
     reconnect();
@@ -198,21 +205,21 @@ void loop()
 
 
 
-void controlEncendido() {
-  if (estadoPin < 2) {
-    digitalWrite(OTHER_PIN, estadoPin);
+void constrolServo() {
+  // Desplazamos a la posición de la variable posicionServo
+  //  servoMotor.write(posicionServo);
+
+  if (posicionServo == 1) {
+    servoMotor.write(0);
+    delay(200);
+    servoMotor.write(100);
+    delay(200);
+  } else {
+    servoMotor.write(0);
   }
+
 }
 
-void modoFiesta() {
-  if (estadoPin == 2) {
-    client.publish("mike/5625/recibido", "modo fiesta");
-    digitalWrite(OTHER_PIN, 1);
-    delay(random(100, 800));
-    digitalWrite(OTHER_PIN, 0);
-    delay(random(100, 800));
-  }
-}
 
 void writeString(char add, String data)
 {
